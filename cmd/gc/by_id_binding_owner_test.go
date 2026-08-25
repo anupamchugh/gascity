@@ -505,6 +505,72 @@ func TestUnreadableRelicNoteIsReportedAndFailsOpen(t *testing.T) {
 	}
 }
 
+// refuseTheseCities installs the same standing storage refusal for several
+// cities at once, without standing up a binding for any of them.
+//
+// seedCLIStorageRoutes cannot be called twice: it resets the whole funnel
+// first, so the second call drops the first city's routes. A row that needs a
+// city and its control refused at the same moment resets once and seeds both.
+func refuseTheseCities(t *testing.T, refusal error, cityPaths ...string) {
+	t.Helper()
+	resetCLIStorageRoutes(t)
+	for _, cityPath := range cityPaths {
+		entry := cliStorageRoutesEntryFor(filepath.Clean(cityPath))
+		entry.once.Do(func() { entry.routes = refusingStorageRoutes("infra", refusal) })
+	}
+}
+
+// TestRefusedCityDeniesTheRelicItsOwnCensusRecorded is the ga-q8ick fix as one
+// composition, and it is the row that holds the two ends of the note together.
+//
+// Every other row assembles one end. The census writes the note keyed by the
+// ref of the binding IT built; the refused by-id path looks a ref up in that
+// note using the ref of the binding the REFUSED funnel built. Those are two
+// constructions on two different days of a city's life — one over an opened
+// sqlite binding, one over five refusedClassStore values grouped by equality —
+// and nothing asserted they spell the ref the same way. They do, because both
+// go through storeref.ClassRef over the infrastructure class set, and if either
+// side ever narrowed to the classes its own routes happened to name, the lookup
+// would miss and the denial would vanish: no error, ok=false, the caller's scan
+// serves the pre-migration copy the migration left in the work ledger. Exactly
+// the ga-q8ick symptom, restored silently.
+//
+// So the note here is not written by the test. The city is served, a relic is
+// carried into its binding the way `gc storage migrate` does, and the real boot
+// census records it. Only then is the city refused.
+func TestRefusedCityDeniesTheRelicItsOwnCensusRecorded(t *testing.T) {
+	cityPath, _ := foreignProviderCity(t)
+	relic, _ := classResidentWorkShapedBead(t, cityPath, "gc-relic1", "carried across by the migration")
+
+	recorded, err := readRelicCensusMemo(cityPath)
+	if err != nil {
+		t.Fatalf("reading the note the boot census wrote: %v", err)
+	}
+	if len(recorded) != 1 {
+		t.Fatalf("the boot census recorded %d ref(s) for a city whose binding holds %s; with no note written by the census this row would be asserting against its own fixture", len(recorded), relic.ID)
+	}
+
+	// The control city is refused identically and has no note, which is what
+	// makes the denial below attributable to the note rather than to the refusal.
+	control := t.TempDir()
+	refuseTheseCities(t, errors.New("storage refused: this city has not converged on its configured [storage] binding; run `gc storage migrate`"), cityPath, control)
+
+	_, ok, err := cliByIDBindingOwner(cityPath, relic.ID)
+	if err == nil {
+		t.Fatalf("a refused city whose own census recorded a relic resolved %s to ok=%v with no error; the caller falls through to its scan and serves the copy the migration retained in the work store", relic.ID, ok)
+	}
+	if !storeref.IsStandingRefusal(err) {
+		t.Errorf("the denial came back as %v, want the standing storage refusal", err)
+	}
+	if !strings.Contains(err.Error(), relicCensusMemoName) {
+		t.Errorf("the denial reads %q without naming the note that produced it", err)
+	}
+
+	if _, ok, err := cliByIDBindingOwner(control, relic.ID); err != nil || ok {
+		t.Errorf("the same refusal over a city with no note resolved to ok=%v err=%v, want a clean fall-through; absence of a note is not evidence, and denying there takes work-bead reads away from every unconverged city", ok, err)
+	}
+}
+
 // TestConvoyResolutionStillRefusesAnIdTwoLedgersBothHold covers the rule the
 // binding short-circuit steps around, which until now nothing asserted anywhere
 // in the tree.
