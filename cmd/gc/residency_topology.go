@@ -269,7 +269,7 @@ func cliResidencyBindings(cityPath string) ([]storeref.ClassBinding, error) {
 		return entry.bindings, entry.refused
 	}
 
-	bindings, refused := residencyBindingsFromRoutes(cliStorageRoutes(cityPath))
+	bindings, refused := residencyBindingsFromRoutesWithNote(cliStorageRoutes(cityPath), cityPath)
 
 	cliResidencyBindingsMu.Lock()
 	defer cliResidencyBindingsMu.Unlock()
@@ -436,6 +436,29 @@ func dropCLIResidencyBindings(key string) {
 // both of these the resolver's bug, one file over; reuse storeref's
 // identity-based set at that point.
 func residencyBindingsFromRoutes(routes *storageRoutes) ([]storeref.ClassBinding, error) {
+	return residencyBindingsFromRoutesWithNote(routes, "")
+}
+
+// residencyBindingsFromRoutesWithNote is the grouping plus the city's durable
+// relic note, for the callers that hold a cityPath.
+//
+// The note is what a refused city has instead of a census. censusBindingRelics
+// only reads a binding whose mint bit verified, and a refused store declares no
+// mint namespace — so on the boot where this matters most, the live census
+// learns nothing and every binding falls back to the pessimistic default. The
+// note is a file under the city's own .gc, so it is readable anyway, and it is
+// TRUE-only: a ref it does not name is "not known", never "known clean".
+//
+// An empty cityPath means the caller has no city to read a note from, which is
+// the honest "no evidence" rather than a missing wire — the controller's own
+// topology takes that path, and its routes were censused live by this process.
+// A corrupt note reads as no note: every path out of readRelicCensusMemo that
+// answers "not known" is the safe one, and refusing a topology over an
+// unreadable cache would turn an optimization into an outage.
+//
+// The read is once per process per city in practice, because the only caller
+// that passes a cityPath is cliResidencyBindings, which memoizes.
+func residencyBindingsFromRoutesWithNote(routes *storageRoutes, cityPath string) ([]storeref.ClassBinding, error) {
 	byStore := map[beads.Store][]coordclass.Class{}
 	var order []beads.Store
 	for _, class := range coordclass.Classes() {
@@ -451,7 +474,24 @@ func residencyBindingsFromRoutes(routes *storageRoutes) ([]storeref.ClassBinding
 		}
 		byStore[store] = append(byStore[store], class)
 	}
-	return residencyBindingsFor(order, byStore, routes.hasLegacyResidents)
+	return residencyBindingsFor(order, byStore, routes.hasLegacyResidents, relicNoteFor(cityPath))
+}
+
+// relicNoteFor reads the city's durable relic note into the predicate
+// BuildBindings asks per binding ref, or nil when there is no city to ask.
+//
+// A read error yields the note it returned anyway — readRelicCensusMemo hands
+// back the empty set alongside it — because "not known" is the direction that
+// cannot deny a read.
+func relicNoteFor(cityPath string) func(storeref.StoreRef) bool {
+	if cityPath == "" {
+		return nil
+	}
+	known, _ := readRelicCensusMemo(cityPath)
+	if len(known) == 0 {
+		return nil
+	}
+	return func(ref storeref.StoreRef) bool { return known[string(ref)] }
 }
 
 // residencyBindingsFor turns a store->classes grouping into bindings, and
@@ -465,8 +505,11 @@ func residencyBindingsFromRoutes(routes *storageRoutes) ([]storeref.ClassBinding
 // relics answers the boot census's question for a binding store. A nil one is
 // the pessimistic answer for every store, which is what a caller holding no
 // censused routes is entitled to claim.
-func residencyBindingsFor(order []beads.Store, byStore map[beads.Store][]coordclass.Class, relics func(beads.Store) bool) ([]storeref.ClassBinding, error) {
-	return storeref.BuildBindings(order, byStore, storeref.BindingOptions{Relics: relics})
+//
+// known answers the durable note's question for a binding ref, and its nil is
+// the OPPOSITE default: no note is no evidence, and this bit only ever denies.
+func residencyBindingsFor(order []beads.Store, byStore map[beads.Store][]coordclass.Class, relics func(beads.Store) bool, known func(storeref.StoreRef) bool) ([]storeref.ClassBinding, error) {
+	return storeref.BuildBindings(order, byStore, storeref.BindingOptions{Relics: relics, KnownRelics: known})
 }
 
 // soleBindingResidency derives the bindings for a caller that holds ONE opened
@@ -491,7 +534,7 @@ func residencyBindingsFor(order []beads.Store, byStore map[beads.Store][]coordcl
 // which is the same argument that makes the grouping above safe.
 func soleBindingResidency(store beads.Store) ([]storeref.ClassBinding, error) {
 	order := []beads.Store{store} // residency:allow one opened binding, grouped for the shared BuildBindings derivation below
-	return residencyBindingsFor(order, map[beads.Store][]coordclass.Class{store: infrastructureClasses()}, nil)
+	return residencyBindingsFor(order, map[beads.Store][]coordclass.Class{store: infrastructureClasses()}, nil, nil)
 }
 
 // infrastructureClasses is the class set a whole split relocates: every
