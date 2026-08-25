@@ -53,13 +53,20 @@ import (
 //
 // An error is a read that FAILED, never absence. Reading "the binding could not
 // answer" as "the bead is not there" is the root-loss shape this lane exists to
-// prevent. The one error that is not a fault is the one-shot funnel's standing
-// refusal: it is a verdict about a CITY's storage configuration and says nothing
-// about a bead, and a refused city still serves WORK from its work ledger. The
-// resolver applies that distinction from the leg's own role — a residence probe
-// for an id no relocated class could own tolerates the refusal, while the
-// authority leg for an id inside a reserved namespace surfaces it, because there
-// the refusal IS the answer.
+// prevent. The one error that is not always a fault is the one-shot funnel's
+// standing refusal: it is a verdict about a CITY's storage configuration and
+// says nothing about a bead, and a refused city still serves WORK from its work
+// ledger. The resolver applies that distinction from the leg's own role — the
+// authority leg for an id inside a reserved namespace surfaces the refusal,
+// because there the refusal IS the answer, while a residence probe for an id no
+// relocated class could own tolerates it.
+//
+// That toleration is conditional, and the condition is the one thing about a
+// refused binding readable without reading it: a durable relic census proving
+// the binding holds ids the migration preserved. Then the probe's miss is not
+// harmless — the work store's frozen pre-migration copy is what the caller
+// falls through to — so the refusal is surfaced there too, wrapped by
+// withRelicNoteRemedy with the note that denied it.
 func cliByIDOwner(cityPath, id string, work beads.Store) (storeref.Owner, error) {
 	return byIDOwnerForTopology(cliResidencyTopology(cityPath, nil, work, nil), id, work)
 }

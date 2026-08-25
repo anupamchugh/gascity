@@ -345,13 +345,16 @@ func (r *hookClaimClassRoute) knownResident(id string) bool {
 // restatement of one the by-id door already had. Two consequences follow from
 // the collapse, and both are the point:
 //
-// An error is a read that FAILED, never absence, and the one non-fault is the
-// one-shot funnel's standing refusal on a WORK-shaped id. That is now the
+// An error is a read that FAILED, never absence, and the one sometimes-non-fault
+// is the one-shot funnel's standing refusal on a WORK-shaped id. That is now the
 // resolver's per-leg policy rather than a predicate here: a residence probe for
 // an id no relocated class could own tolerates the refusal, because a refused
 // city still serves work from its work ledger, while the authority leg for an id
 // inside a reserved namespace surfaces it, because there the refusal IS the
-// answer.
+// answer. The toleration is withdrawn on a binding a durable relic census
+// PROVED holds ids the migration preserved: a miss there is not harmless,
+// because the work store still carries the frozen pre-migration copy the claim
+// would then write.
 //
 // And a binding the boot census certified relic-free is not probed at all for a
 // work-shaped id. The census is taken to retire exactly this read, and this seam
