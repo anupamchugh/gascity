@@ -83,7 +83,7 @@ func byIDOwnerForTopology(topo storeref.Topology, id string, work beads.Store) (
 	if err != nil {
 		return storeref.Owner{}, err
 	}
-	owner, err := storeref.ResolveOwnerRow(plan, id)
+	owner, err := withRelicNoteRemedy(storeref.ResolveOwnerRow(plan, id))
 	switch {
 	case err == nil:
 		return owner, nil
@@ -158,7 +158,31 @@ func byIDBindingOwnerForTopology(topo storeref.Topology, id string) (storeref.Ow
 	if err != nil {
 		return storeref.Owner{}, false, err
 	}
-	return storeref.ResolveBindingOwner(plan, id)
+	owner, ok, err := storeref.ResolveBindingOwner(plan, id)
+	owner, err = withRelicNoteRemedy(owner, err)
+	return owner, ok, err
+}
+
+// withRelicNoteRemedy names this plane's relic note on the one denial that is
+// otherwise unactionable.
+//
+// storeref decides that a refused binding proven to hold migration-preserved
+// ids may not be skipped, and says so — but the proof is a file this plane
+// writes, so the sentence stops one step short of the operator's next move. The
+// refusal's own text is the boot gate's, identical to the one a city sees for an
+// infrastructure-class id, and an operator reading it looks for a missing bead.
+// What they need is the note that denied the read and the fact that converging
+// the split is what clears it.
+//
+// The note is named city-relative because the denial arrives without a
+// cityPath: a plan is executed frames below the funnel that resolved it, and
+// threading a city down for a message would put a path in four signatures to
+// reach one sentence.
+func withRelicNoteRemedy(owner storeref.Owner, err error) (storeref.Owner, error) {
+	if err == nil || !errors.Is(err, storeref.ErrProvenRelicRefusal) {
+		return owner, err
+	}
+	return owner, fmt.Errorf("%w\n  the proof is this city's relic-census note (%s); converge the configured [storage] split — `gc doctor` reports what is outstanding — and this id resolves from the binding again", err, relicCensusMemoName)
 }
 
 // beadForOwner returns the row the owner names, reading it only when the

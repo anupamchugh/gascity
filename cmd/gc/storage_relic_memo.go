@@ -48,9 +48,15 @@ type relicCensusMemo struct {
 	BindingsWithResidents []string `json:"bindings_with_residents"`
 }
 
+// relicCensusMemoName is the note's location relative to a city root. It is
+// spelled once because operator text names it without holding a cityPath: a
+// by-id denial is raised inside the resolver, several frames below the funnel
+// that knew which city it was resolving.
+const relicCensusMemoName = ".gc/storage-relic-census.json"
+
 // relicCensusMemoPath is where the note lives, under the city's own .gc.
 func relicCensusMemoPath(cityPath string) string {
-	return filepath.Join(cityPath, ".gc", "storage-relic-census.json")
+	return filepath.Join(cityPath, filepath.FromSlash(relicCensusMemoName))
 }
 
 // readRelicCensusMemo returns the refs a previous process observed to hold

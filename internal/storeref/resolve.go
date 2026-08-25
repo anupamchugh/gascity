@@ -641,6 +641,21 @@ func ResolveBindingOwner(p ResolvedPlan, id string) (Owner, bool, error) {
 	return resolveByID(p, id, true)
 }
 
+// ErrProvenRelicRefusal explains a by-id denial that a refused city's binding
+// would otherwise have been forgiven for.
+//
+// A standing storage refusal is normally tolerated on a residence probe — a
+// refused city still serves WORK — and the two cases are then indistinguishable
+// in the text: the operator sees the boot gate's own sentence and goes looking
+// for a bead. What actually happened is that a durable census proved this
+// binding holds ids the migration preserved, which withdrew the carve-out and
+// denied a read that would otherwise have been served from the frozen copy.
+//
+// It is a sentinel as well as a sentence because the remedy is the CALLER's to
+// phrase: this package knows the reason and not where the proof is written
+// down. cmd/gc's by-id seam matches on it and names its own note.
+var ErrProvenRelicRefusal = errors.New("a durable relic census proved this binding holds ids outside its reserved namespaces, so its standing storage refusal is a denial rather than a leg to skip")
+
 // resolveByID is the leg walk both ModeFirstOwner executors share. found
 // reports whether an owner was pinned; bindingOnly stops the walk at the work
 // axis instead of handing the work leg back unprobed.
@@ -672,6 +687,13 @@ func resolveByID(p ResolvedPlan, id string, bindingOnly bool) (Owner, bool, erro
 			// A refused city still serves WORK, and this leg was only ever a
 			// residence probe for an id no relocated class could own.
 			continue
+		case leg.Role == RoleResidenceProbe && IsStandingRefusal(err):
+			// The same refusal on a probe the planner made Fatal: the carve-out
+			// above was withdrawn because this binding is PROVEN to hold ids
+			// outside its reserved namespaces. Say so, or the operator reads a
+			// sentence identical to an in-namespace refusal and looks for a
+			// missing bead rather than for the evidence that denied it.
+			return Owner{Ref: leg.Leg.Ref}, false, fmt.Errorf("reading %q from %s: %w: %w", id, legName(leg.Leg.Ref), err, ErrProvenRelicRefusal)
 		default:
 			return Owner{Ref: leg.Leg.Ref}, false, fmt.Errorf("reading %q from %s: %w", id, legName(leg.Leg.Ref), err)
 		}

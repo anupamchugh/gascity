@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -373,6 +374,16 @@ func TestBindingOwnerRefusedCityWithKnownRelicsRefuses(t *testing.T) {
 	if !storeref.IsStandingRefusal(err) {
 		t.Errorf("the refusal came back as %v, want the standing storage refusal that names the remedy", err)
 	}
+	// The refusal's own sentence is the boot gate's, and a city takes the
+	// identical one for an infrastructure-class id it simply cannot serve. What
+	// makes this denial actionable is the evidence behind it, which lives in a
+	// file the operator has no reason to know exists.
+	if !strings.Contains(err.Error(), relicCensusMemoName) {
+		t.Errorf("the denial reads %q and never names the note that produced it; the operator sees an ordinary storage refusal and goes looking for a missing bead", err)
+	}
+	if !strings.Contains(err.Error(), "gc doctor") {
+		t.Errorf("the denial reads %q with no route back to a served city", err)
+	}
 }
 
 // TestBindingOwnerRefusedCityWithoutMemoStillDeclines is the control, and it
@@ -421,6 +432,76 @@ func TestResidencyBindingsCarryTheDurableRelicMemo(t *testing.T) {
 	}
 	if !noted[0].KnownLegacyResidents {
 		t.Errorf("the binding %s is named in the relic note and still reads as unproven; the note is not reaching the plan", noted[0].Leg.Ref)
+	}
+}
+
+// TestRelicNoteProvesNothingAboutAnotherBinding is the note's other half: it is
+// keyed by binding REF, and a ref it does not name is "not known".
+//
+// A per-class split writes refs like "class:g"; a whole split writes
+// "class:gmnos". Reading a note that names one as evidence about the other
+// would deny by-id reads on a city whose own binding was never censused dirty,
+// and the row that pins the positive direction cannot see the difference — with
+// one binding in play, "the note names this ref" and "the note is non-empty"
+// are the same predicate.
+func TestRelicNoteProvesNothingAboutAnotherBinding(t *testing.T) {
+	cityPath, _ := foreignProviderCity(t)
+
+	bindings, _ := cliResidencyBindings(cityPath)
+	if len(bindings) != 1 {
+		t.Fatalf("the fixture resolved %d bindings, want exactly one", len(bindings))
+	}
+	foreign := string(storeref.ClassRef([]coordclass.Class{coordclass.ClassGraph}))
+	if foreign == string(bindings[0].Leg.Ref) {
+		t.Fatalf("the foreign ref %q is the fixture's own; the row would prove nothing", foreign)
+	}
+	if err := writeRelicCensusMemo(cityPath, map[string]bool{foreign: true}); err != nil {
+		t.Fatalf("writing the relic-census note: %v", err)
+	}
+	dropCLIResidencyBindings(filepath.Clean(cityPath))
+
+	noted, _ := cliResidencyBindings(cityPath)
+	if len(noted) != 1 {
+		t.Fatalf("the re-derived bindings number %d, want one", len(noted))
+	}
+	if noted[0].KnownLegacyResidents {
+		t.Errorf("binding %s reads as proven from a note that names only %s; the note is being read as a flag rather than as a per-ref record", noted[0].Leg.Ref, foreign)
+	}
+}
+
+// TestUnreadableRelicNoteIsReportedAndFailsOpen pins both halves of the
+// corrupt-note contract.
+//
+// Failing open is deliberate: refusing a topology over an unreadable cache
+// turns an optimization into an outage, and "not known" is the direction that
+// cannot deny a read. Doing it SILENTLY is not. The note is the only evidence
+// that makes a proven-relic city refuse loudly, so a city whose note stopped
+// parsing has quietly lost that protection and looks exactly like a city that
+// never had one.
+func TestUnreadableRelicNoteIsReportedAndFailsOpen(t *testing.T) {
+	cityPath, _ := foreignProviderCity(t)
+	// The funnel is already resolved by the fixture, so the boot census has
+	// taken its own read of the note and will not take another. What lands on
+	// the buffer below is this path's report and nothing else.
+	path := relicCensusMemoPath(cityPath)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("preparing %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte("{ this is not the note\n"), 0o644); err != nil {
+		t.Fatalf("writing a corrupt relic-census note: %v", err)
+	}
+	dropCLIResidencyBindings(filepath.Clean(cityPath))
+
+	stderr := captureCLIStorageStderr(t)
+	bindings, _ := cliResidencyBindings(cityPath)
+	if len(bindings) != 1 {
+		t.Fatalf("the re-derived bindings number %d, want one", len(bindings))
+	}
+	if bindings[0].KnownLegacyResidents {
+		t.Errorf("an unreadable note proved relics on %s; a note that cannot be read is not evidence", bindings[0].Leg.Ref)
+	}
+	if !strings.Contains(stderr.String(), path) {
+		t.Errorf("the unreadable relic-census note was swallowed; stderr = %q, want it to name %s", stderr.String(), path)
 	}
 }
 

@@ -482,12 +482,23 @@ func residencyBindingsFromRoutesWithNote(routes *storageRoutes, cityPath string)
 //
 // A read error yields the note it returned anyway — readRelicCensusMemo hands
 // back the empty set alongside it — because "not known" is the direction that
-// cannot deny a read.
+// cannot deny a read. It is REPORTED, though: this note is the only evidence
+// that makes a refused city deny a work-shaped by-id read instead of serving
+// the copy the migration left behind, so a city whose note stopped parsing has
+// silently lost that protection and reads exactly like a city that never had
+// one. Failing open without a word is how that goes unnoticed until the wrong
+// copy is written.
+//
+// The sink is the one-shot gate's own, because this path is reached only from
+// cliResidencyBindings — the funnel whose diagnostics that writer exists for.
 func relicNoteFor(cityPath string) func(storeref.StoreRef) bool {
 	if cityPath == "" {
 		return nil
 	}
-	known, _ := readRelicCensusMemo(cityPath)
+	known, err := readRelicCensusMemo(cityPath)
+	if err != nil {
+		fmt.Fprintf(cliStorageStderr, "%s: reading the relic-census note: %v; this city's bindings resolve as though no binding is known to hold relics\n", cliStorageLogPrefix, err) //nolint:errcheck // best-effort stderr
+	}
 	if len(known) == 0 {
 		return nil
 	}
