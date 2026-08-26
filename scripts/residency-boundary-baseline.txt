@@ -100,6 +100,19 @@
 # appears below on the cliSoleClassBinding row, which is a different claim (this
 # surface answers every reserved prefix from one store) and stays.
 #
+# cmd/gc/cmd_bd_by_id.go's bdByIDClassDoor.resolve carried that same
+# `d:bdIDIsClassReserved` vocabulary and is retired for the same reason, one
+# door further out (ga-wc9zq). resolve stamped the id's prefix onto the
+# resolution as a SECOND ownership bit, and the surface then read that bit
+# rather than the store's answer — which refused every id a rig lawfully mints
+# inside a reserved namespace, since config.ValidateRigs allows such a prefix
+# and ReservedPrefixWarnings only advises. Ownership is RESIDENCE now: the
+# prefix decides only which id gets asked about, and the field the census was
+# pointing at is gone with it. The file's remaining rows are the two argv walks
+# (bdByIDRefusedVerb, bdFirstReservedClassID) and the predicate's own
+# declaration — those read a prefix to choose a QUESTION, never an answer, and
+# they stay.
+#
 # The b:cliSoleClassBinding rows are the same kind of census one layer down:
 # the surfaces that answer every reserved prefix from ONE store, which is a
 # claim about the city's topology and not just a call. The accessor checks that
@@ -139,7 +152,6 @@ cmd/gc/cmd_bd_by_id.go	bdFirstReservedClassID	d:bdIDIsClassReserved	1
 cmd/gc/cmd_bd_by_id.go	bdIDIsClassReserved	d:AllReservedClassPrefixes	1
 cmd/gc/cmd_bd_by_id.go	bdIDIsClassReserved	d:bdIDIsClassReserved	1
 cmd/gc/cmd_bd_by_id.go	openBdByIDClassFrontDoor	b:cliSoleClassBinding	1
-cmd/gc/cmd_bd_by_id.go	resolve	d:bdIDIsClassReserved	1
 cmd/gc/cmd_beads.go	doBeadsListFallback	a:openAllConvoyStoresAt	1
 cmd/gc/cmd_beads.go	doBeadsShowFallback	a:openAllConvoyStoresAt	1
 cmd/gc/cmd_convoy.go	convoyStoreCandidates	a:convoyStoreCandidates	1
