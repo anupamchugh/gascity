@@ -5311,6 +5311,8 @@ export type TypedEventStreamEnvelope = ({
 } & TypedEventStreamEnvelopeSessionDemandClaimDivergence) | ({
     type: 'session.drain_acked_with_assigned_work';
 } & TypedEventStreamEnvelopeSessionDrainAckedWithAssignedWork) | ({
+    type: 'session.drain_fence_unavailable';
+} & TypedEventStreamEnvelopeSessionDrainFenceUnavailable) | ({
     type: 'session.draining';
 } & TypedEventStreamEnvelopeSessionDraining) | ({
     type: 'session.idle_killed';
@@ -6605,6 +6607,24 @@ export type TypedEventStreamEnvelopeSessionDrainAckedWithAssignedWork = {
 };
 
 /**
+ * TypedEventStreamEnvelope session.drain_fence_unavailable
+ */
+export type TypedEventStreamEnvelopeSessionDrainFenceUnavailable = {
+    actor: string;
+    depends_on_step_ids?: Array<string>;
+    message?: string;
+    payload: SessionLifecyclePayload;
+    run_id?: string;
+    seq: number;
+    session_id?: string;
+    step_id?: string;
+    subject?: string;
+    ts: string;
+    type: 'session.drain_fence_unavailable';
+    workflow?: WorkflowEventProjection;
+};
+
+/**
  * TypedEventStreamEnvelope session.draining
  */
 export type TypedEventStreamEnvelopeSessionDraining = {
@@ -7178,6 +7198,8 @@ export type TypedTaggedEventStreamEnvelope = ({
 } & TypedTaggedEventStreamEnvelopeSessionDemandClaimDivergence) | ({
     type: 'session.drain_acked_with_assigned_work';
 } & TypedTaggedEventStreamEnvelopeSessionDrainAckedWithAssignedWork) | ({
+    type: 'session.drain_fence_unavailable';
+} & TypedTaggedEventStreamEnvelopeSessionDrainFenceUnavailable) | ({
     type: 'session.draining';
 } & TypedTaggedEventStreamEnvelopeSessionDraining) | ({
     type: 'session.idle_killed';
@@ -8537,6 +8559,25 @@ export type TypedTaggedEventStreamEnvelopeSessionDrainAckedWithAssignedWork = {
     subject?: string;
     ts: string;
     type: 'session.drain_acked_with_assigned_work';
+    workflow?: WorkflowEventProjection;
+};
+
+/**
+ * TypedTaggedEventStreamEnvelope session.drain_fence_unavailable
+ */
+export type TypedTaggedEventStreamEnvelopeSessionDrainFenceUnavailable = {
+    actor: string;
+    city: string;
+    depends_on_step_ids?: Array<string>;
+    message?: string;
+    payload: SessionLifecyclePayload;
+    run_id?: string;
+    seq: number;
+    session_id?: string;
+    step_id?: string;
+    subject?: string;
+    ts: string;
+    type: 'session.drain_fence_unavailable';
     workflow?: WorkflowEventProjection;
 };
 
