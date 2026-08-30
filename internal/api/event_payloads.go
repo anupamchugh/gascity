@@ -637,6 +637,7 @@ func init() {
 	events.RegisterPayload(events.SessionUnknownState, SessionUnknownStatePayload{})
 	events.RegisterPayload(events.SessionResetStalled, events.SessionResetStalledPayload{})
 	events.RegisterPayload(events.SessionWorkQueryFailed, SessionLifecyclePayload{})
+	events.RegisterPayload(events.SessionDrainFenceUnavailable, SessionLifecyclePayload{})
 	events.RegisterPayload(events.SessionColdStartTimeout, events.NoPayload{})
 	events.RegisterPayload(events.ConvoyCreated, events.NoPayload{})
 	events.RegisterPayload(events.ConvoyClosed, events.NoPayload{})
